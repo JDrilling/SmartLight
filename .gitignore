@@ -1,4 +1,6 @@
 *.o
+main.cpp
+SmartLight.ino
 /wiringPi/
 /SPI/
 build.sh
