@@ -240,6 +240,13 @@ void NRF::sendPacket(String packet) {
 
   digitalWrite(CSN, HIGH);
 
+  digitalWrite(CE, LOW);
+  writeBit(0,0,0);
+  digitalWrite(CE, HIGH);
+  digitalWrite(CE, LOW);
+  writeBit(0,0,1);
+  digitalWrite(CE, HIGH);
+
   if (sequence == USHRT_MAX)
     sequence = 0;
   else
