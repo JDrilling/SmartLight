@@ -51,7 +51,8 @@
 #define sendPayloadCMD  0b10100000
 #define readPayloadCMD  0b01100001
 
-#define firstPipeAddress B00110001
+#define firstPipeAddress 0b00110001
+#define constPayloadLength 32
 
 
 class NRF
@@ -74,6 +75,8 @@ class NRF
     void sendMessage(String message, unsigned short destination);
 
     void transferByte(byte byteToWrite);
+
+    void debugMessage(String message);
 
 };
 #endif
