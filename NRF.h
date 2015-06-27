@@ -6,22 +6,29 @@
 #include <iostream>
 #include <string>
 #include <cstring>
-#include <wiringPiSPI.h>
-#include <wiringPi.h>
+#include <bcm2835.h>
 #include <bitset>
+#include <unistd.h>
 
 
 //Type conversions
 #define byte unsigned char
 #define String std::string
 
+#define OUTPUT  BCM2835_GPIO_FSEL_OUTP
+#define INPUT   BCM2835_GPIO_FSEL_INPT
+
 // Pi Pins - - - - Hardware pin#
-#define CE   8      //24
-#define CSN  25     //22
-#define IRQ  24     //18
-#define MOSI 10     //19
-#define MISO 9      //21
-#define SCK  11     //23
+#define CE    RPI_GPIO_P1_22    //22
+#define CSN   RPI_GPIO_P1_18    //18
+#define IRQ   RPI_GPIO_P1_16    //16
+#define MOSI  RPI_GPIO_P1_19    //19
+#define MISO  RPI_GPIO_P1_21    //21
+#define SCK   RPI_GPIO_P1_23    //23
+
+
+void digitalWrite(int pin, int value);
+void pinMode(int pin, int mode);
 
 //*---------------------Arduino----------------------*//
 #else
@@ -46,7 +53,7 @@
 #define sequenceLength      2
 #define headerLength        (destinationLength + sequenceLength)
 #define maxPacketLength     32
-#define maxPayloadLength       (maxPacketLength - headerLength)
+#define maxPayloadLength    (maxPacketLength - headerLength)
 
 #define flushTXCMD      0b11100001
 #define flushRXCMD      0b11100010

@@ -3,10 +3,17 @@
 
 unsigned short NRF::sequence = 0;
 
+#ifdef __linux__
+void pinMode(int pin, int mode){bcm2835_gpio_fsel(pin,mode);}
+void digitalWrite(int pin, int val){
+    bcm2835_gpio_write(pin,val);
+}
+#endif
+
 void NRF::init() {
 
 #ifdef __linux__
-  wiringPiSetupGpio();
+  bcm2835_init();
 #endif
 
   //Initialize Pins
@@ -22,24 +29,34 @@ void NRF::init() {
   //Keeps clock low until data is available
   SPI.setDataMode(SPI_MODE0);
   SPI.setClockDivider(SPI_CLOCK_DIV2);
-#endif
 
   //Preset CE and CSN Pins to High.
   digitalWrite(CE, HIGH);
   digitalWrite(CSN, HIGH);
 
-#ifdef __arduino__
+  dealay (10);
+
   //Start the SPI
   SPI.begin();
 #endif
 #ifdef __linux__
-  wiringPiSPISetup(0, 8000000);
+  digitalWrite(CE, HIGH);
+  digitalWrite(CSN, HIGH);
+
+  bcm2835_spi_begin();
+  bcm2835_spi_setBitOrder(BCM2835_SPI_BIT_ORDER_MSBFIRST);
+  bcm2835_spi_setDataMode(BCM2835_SPI_MODE0);
+  bcm2835_spi_setClockDivider(BCM2835_SPI_CLOCK_DIVIDER_32);
+  bcm2835_spi_chipSelect(BCM2835_SPI_CS0);
+
+  usleep(10000);
 #endif
+
   
   debugMessage("SPI Set up");
   
-  writeBit(0, 0, 1); //RX Mode
-  //writeBit(0, 0, 0); //Tx
+  //writeBit(0, 0, 1); //RX Mode
+  writeBit(0, 0, 0); //Tx
   writeBit(0, 1, 1); //Power UP
   writeBit(0, 4, 1); //Disable MAX_RT Interrupt
   writeBit(0, 5, 1); //Disable TX_DS Interrupt
@@ -84,7 +101,7 @@ byte NRF::readAddress(byte address) {
   readData = SPI.transfer(0x00);
 #endif
 #ifdef __linux__
-  wiringPiSPIDataRW(0, &readData, 1);
+  readData = bcm2835_spi_transfer(0x00);
 #endif
   
   digitalWrite(CSN, HIGH);
@@ -151,14 +168,13 @@ String NRF::getPacket() {
     packet += SPI.transfer(0x00);
 #endif
 #ifdef __linux__
-  unsigned char cmd[1] = {readPayloadCMD};
+  transferByte(readPayloadCMD);
 
-  wiringPiSPIDataRW(0, cmd, 1);
-  unsigned char* cPacket = new unsigned char[packetLength];
+  char* cPacket = new char[packetLength];
 
   for (byte i = 0; i < packetLength; i++) cPacket[i] = 0x00;
 
-  wiringPiSPIDataRW(0, cPacket, packetLength);
+  bcm2835_spi_transfern(cPacket, packetLength);
 
   packet = std::string(cPacket, cPacket + packetLength);
   delete cPacket;
@@ -238,18 +254,26 @@ void NRF::sendPacket(char * packet) {
 
   transferByte(sendPayloadCMD);
 
-  debugMessage("Packet To send...");
-  debugMessage(packet);
 
 #ifdef __arduino__
   for (unsigned int i = 0; i < packetLength; i++)
-    SPI.transfer(packet[i]);
+    transferByte(packet[i]);
 
 #endif
 #ifdef __linux__
-  std::cout << "cPacket:  \"" << packet <<  "\"" << std::endl;
-  wiringPiSPIDataRW(0,(unsigned char *) packet, packetLength);
-  std::cout << "cPacket:  \"" << packet << "\"" << std::endl;
+  std::cout << "Packet:  ";
+  for(unsigned short i = 0; i < constPacketLength; i++)
+    std::cout << packet[i];
+
+  std::cout << std::endl;
+
+  bcm2835_spi_transfern(packet, packetLength);
+
+  std::cout << "Packet:   ";
+  for(unsigned short i = 0; i < constPacketLength; i++)
+    std::cout << packet[i];
+
+  std::cout << std::endl;
 #endif
 
   digitalWrite(CSN, HIGH);
@@ -282,7 +306,7 @@ void NRF::transferByte(byte byteToWrite) {
   SPI.transfer(byteToWrite);
 #endif
 #ifdef __linux__
-  wiringPiSPIDataRW(0, &byteToWrite, 1);
+  bcm2835_spi_transfer(byteToWrite);
 #endif
 }
 
