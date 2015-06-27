@@ -60,7 +60,7 @@ void NRF::init() {
   writeBit(0, 1, 1); //Power UP
   writeBit(0, 4, 1); //Disable MAX_RT Interrupt
   writeBit(0, 5, 1); //Disable TX_DS Interrupt
-  //writeBit(0, 6, 0); //Enable RX_DR Interrupt
+  writeBit(0, 6, 0); //Enable RX_DR Interrupt
 
   //Set Constant Payload Length
   writeByte(firstPipeAddress, constPacketLength);
@@ -138,22 +138,22 @@ void NRF::writeBit(byte address, byte bitToWrite, byte value) {
 void NRF::clearInterrupts() {
 
     //Clear RT
-    if (readAddress(0x07) & 0x08)
+    if (readAddress(0x07) & 0x10)
           writeBit(0x07, 4, 1);
 
       //Clear TX
-    if (readAddress(0x07) & 0x10)
+    if (readAddress(0x07) & 0x20)
         writeBit(0x07, 5, 1);
 
         //Clear RX
-    if (readAddress(0x07) & 0x20)
+    if (readAddress(0x07) & 0x40)
         writeBit(0x07, 6, 1);
 
     return;
 }
 
 String NRF::getPacket() {
-  debugMessage("Getting Packet...");
+  //debugMessage("Getting Packet...");
   
   //Get Packet Length
   byte packetLength = constPacketLength;//readAddress(0b1100000);
@@ -164,7 +164,6 @@ String NRF::getPacket() {
   digitalWrite(CSN, LOW);
 
 #ifdef __arduino__
-  Serial.println(packetLength);
   SPI.transfer(readPayloadCMD);
 
   //Read the payload
@@ -189,8 +188,10 @@ String NRF::getPacket() {
   //Flush Anything left in the buffer
   writeCMD(flushRXCMD);
 
-  debugMessage("Got Packet! ... ");
-  debugMessage(packet);
+  writeBit(0x07, 6, 1);
+
+  //debugMessage("Got Packet! ... ");
+  //debugMessage(packet);
   return packet;
 }
 
