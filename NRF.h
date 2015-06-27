@@ -6,7 +6,7 @@
 #include <iostream>
 #include <string>
 #include <cstring>
-#include <wiringPiSPI.h> //TODO: Install this on PI
+#include <wiringPiSPI.h>
 #include <wiringPi.h>
 
 //Type conversions
@@ -51,8 +51,14 @@
 #define sendPayloadCMD  0b10100000
 #define readPayloadCMD  0b01100001
 
+<<<<<<< HEAD
 #define firstPipeAddress 0b00010001
 #define constPayloadLength 32
+=======
+#define firstPipeAddress B00110001
+
+#define constPacketLength 32
+>>>>>>> origin/master
 
 
 class NRF
@@ -71,12 +77,13 @@ class NRF
 
     String getPacket();
                                       
-    void sendPacket(String payload);
-    void sendMessage(String message, unsigned short destination);
+    void sendPacket(char * payload);
+    void sendMessage(char * message, unsigned short destination);
 
     void transferByte(byte byteToWrite);
 
-    void debugMessage(String message);
+    void debugMessage(String messge);
+    void test();
 
 };
 #endif

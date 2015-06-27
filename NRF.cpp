@@ -1,4 +1,5 @@
 #include "NRF.h"
+#include <bitset>
 
 unsigned short NRF::sequence = 0;
 
@@ -37,13 +38,18 @@ void NRF::init() {
   
   debugMessage("SPI Set up");
   
-  writeBit(0, 0, 1); //RX Mode
+  //writeBit(0, 0, 1); //RX Mode
+  writeBit(0, 0, 0); //Tx
   writeBit(0, 1, 1); //Power UP
   writeBit(0, 4, 1); //Disable MAX_RT Interrupt
   writeBit(0, 5, 1); //Disable TX_DS Interrupt
   //writeBit(0, 6, 0); //Enable RX_DR Interrupt
+<<<<<<< HEAD
   //Set Constant Payload Length
   writeByte(firstPipeAddress, constPayloadLength);
+=======
+  writeByte(0x12, constPacketLength);
+>>>>>>> origin/master
 
   
   //writeBit(0x1D, 2, 1); //Enable DPL
@@ -128,7 +134,7 @@ String NRF::getPacket() {
   debugMessage("Getting Packet...");
   
   //Get Packet Length
-  byte packetLength = constPayloadLength;//readAddress(0b1100000);
+  byte packetLength = constPacketLength;//readAddress(0b1100000);
   String packet = "";
 
 
@@ -167,43 +173,52 @@ String NRF::getPacket() {
   return packet;
 }
 
-void NRF::sendMessage(String message, unsigned short destination) {
+void NRF::sendMessage(char * message, unsigned short destination) {
 
   debugMessage("Sending...");
   debugMessage(message);
 
-  unsigned int messageLeft;
-  unsigned int messageLength;
-  String payload = "";
+  int messageLength;
+  char * payload = new char[constPacketLength + 1];
 
-  messageLength = message.length();
-  messageLeft = messageLength;
+  //Can use this here. Message Must be null terminated.
+  messageLength = strlen(message);
 
   //Divide the message into manageable packets
-  for (unsigned int i = 0; i < messageLength; i += maxPayloadLength) {
+  for (int i = 0; i < messageLength; i += maxPayloadLength) {
 
-#ifdef __arduino__
     //Add the Header first
-    payload = String(destination) + String(sequence);
+    payload[0] = (destination & 0xF0 >> 4);
+    payload[1] = (destination & 0x0F); 
+    payload[2] = (sequence & 0xF0 >> 4);
+    payload[3] = (sequence & 0x0F);
 
-    if (messageLeft >= maxPayloadLength)
-      payload += message.substring(i, i + maxPayloadLength);
-    else //If there isn't a full playload left
-      payload += message.substring(i);
-#endif
 
-#ifdef __linux__
-    payload = std::to_string(destination);
-    payload += std::to_string(sequence);
+    for(unsigned short j = 0; j < maxPayloadLength; j++)
+    {
 
-    if (messageLeft >= maxPayloadLength)
-      payload += message.substr(i, i + maxPayloadLength);
-    else //If there isn't a full playload left
-      payload += message.substr(i);
-#endif
+      std::cout << maxPayloadLength << std::endl;
+
+      //message Left >= 0
+      if((messageLength - i - j) > 0)
+        payload[4+j] = message[j+i];
+      else
+      {
+        payload[4+j] = '\0';
+        debugMessage("NULL");
+      }
+    }
+
+    //Make Sure it's null Terminated
+    //Even Though there is probably a null in there anyway
+    payload[constPacketLength] = '\0';
+
 
     debugMessage("Payload...");
-    debugMessage(payload);
+    for(unsigned short i = 0; i < constPacketLength; i++)
+      std::cout << payload[i];
+
+    std::cout << std::endl;
 
     sendPacket(payload);
   }
@@ -211,11 +226,11 @@ void NRF::sendMessage(String message, unsigned short destination) {
   return;
 }
 
-void NRF::sendPacket(String packet) {
+void NRF::sendPacket(char * packet) {
 
   unsigned int packetLength;
 
-  packetLength = constPayloadLength;//packet.length();
+  packetLength = constPacketLength;//packet.length();
 
   //Get rid of any leftover data
   writeCMD(flushTXCMD);
@@ -234,19 +249,21 @@ void NRF::sendPacket(String packet) {
 
 #endif
 #ifdef __linux__
-  unsigned char * cPacket = new unsigned char[packetLength + 1];
-  std::strcpy((char *) cPacket, packet.c_str());
-  wiringPiSPIDataRW(0, cPacket, packetLength);
+  std::cout << "cPacket:  \"" << packet <<  "\"" << std::endl;
+  wiringPiSPIDataRW(0,(unsigned char *) packet, packetLength);
+  std::cout << "cPacket:  \"" << packet << "\"" << std::endl;
 #endif
 
   digitalWrite(CSN, HIGH);
 
+  /*
   digitalWrite(CE, LOW);
   writeBit(0,0,0);
   digitalWrite(CE, HIGH);
   digitalWrite(CE, LOW);
   writeBit(0,0,1);
   digitalWrite(CE, HIGH);
+  */
 
   if (sequence == USHRT_MAX)
     sequence = 0;
@@ -276,7 +293,26 @@ void NRF::debugMessage(String message){
   Serial.println(message);
 #endif
 #ifdef __linux__
-  std::cout << messge << std::endl;
+  std::cout << message << std::endl;
 #endif
 }
 
+void NRF::test(){
+  debugMessage("----------Test Begin----------");
+  String sReadData;
+  byte readData;
+
+  debugMessage("Status Reg");
+  readData = readAddress(0x07);
+  std::bitset<8> x(readData);
+  std::cout << x << std::endl;
+  debugMessage(sReadData);
+
+  debugMessage("Config Reg");
+  readData = readAddress(0x00);
+  std::bitset<8> y(readData);
+  std::cout << y << std::endl;
+  debugMessage(sReadData);
+
+  debugMessage("----------Test End------------");
+}
