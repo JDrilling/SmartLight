@@ -86,6 +86,10 @@ void NRF::writeByte(byte address, byte byteToWrite) {
   transferByte(byteToWrite);
   
   digitalWrite(CSN, HIGH);
+
+#ifndef __linux__
+  usleep(10000);
+#endif
   
   return;
 }
@@ -196,7 +200,7 @@ void NRF::sendMessage(char * message, unsigned short destination) {
   debugMessage(message);
 
   int messageLength;
-  char * payload = new char[constPacketLength + 1];
+  char payload[constPacketLength + 1];
 
   //Can use this here. Message Must be null terminated.
   messageLength = strlen(message);
@@ -237,6 +241,7 @@ void NRF::sendMessage(char * message, unsigned short destination) {
     sendPacket(payload);
   }
 
+  
   return;
 }
 
@@ -299,6 +304,13 @@ void NRF::writeCMD(byte command) {
   digitalWrite(CSN, LOW);
   transferByte(command);
   digitalWrite(CSN, HIGH);
+
+#ifdef __arduino__
+  delay(1);
+#endif
+#ifdef __linux__
+  usleep(10000);
+#endif
 }
 
 void NRF::transferByte(byte byteToWrite) {
