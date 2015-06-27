@@ -34,7 +34,7 @@ void NRF::init() {
   digitalWrite(CE, HIGH);
   digitalWrite(CSN, HIGH);
 
-  dealay (10);
+  delay(100);
 
   //Start the SPI
   SPI.begin();
@@ -55,12 +55,12 @@ void NRF::init() {
   
   debugMessage("SPI Set up");
   
-  //writeBit(0, 0, 1); //RX Mode
-  writeBit(0, 0, 0); //Tx
+  writeBit(0, 0, 1); //RX Mode
+  //writeBit(0, 0, 0); //Tx
   writeBit(0, 1, 1); //Power UP
   writeBit(0, 4, 1); //Disable MAX_RT Interrupt
   writeBit(0, 5, 1); //Disable TX_DS Interrupt
-  writeBit(0, 6, 0); //Enable RX_DR Interrupt
+  //writeBit(0, 6, 0); //Enable RX_DR Interrupt
 
   //Set Constant Payload Length
   writeByte(firstPipeAddress, constPacketLength);
