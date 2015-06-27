@@ -41,8 +41,9 @@ void NRF::init() {
   writeBit(0, 1, 1); //Power UP
   writeBit(0, 4, 1); //Disable MAX_RT Interrupt
   writeBit(0, 5, 1); //Disable TX_DS Interrupt
-  writeBit(0, 6, 0); //Enable RX_DR Interrupt
-  writeByte(0x12, constPayloadLength);
+  //writeBit(0, 6, 0); //Enable RX_DR Interrupt
+  //Set Constant Payload Length
+  writeByte(firstPipeAddress, constPayloadLength);
 
   
   //writeBit(0x1D, 2, 1); //Enable DPL

@@ -51,7 +51,7 @@
 #define sendPayloadCMD  0b10100000
 #define readPayloadCMD  0b01100001
 
-#define firstPipeAddress 0b00110001
+#define firstPipeAddress 0b00010001
 #define constPayloadLength 32
 
 
