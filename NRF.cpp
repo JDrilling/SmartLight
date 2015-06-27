@@ -1,5 +1,5 @@
 #include "NRF.h"
-#include <bitset>
+
 
 unsigned short NRF::sequence = 0;
 
@@ -38,19 +38,15 @@ void NRF::init() {
   
   debugMessage("SPI Set up");
   
-  //writeBit(0, 0, 1); //RX Mode
-  writeBit(0, 0, 0); //Tx
+  writeBit(0, 0, 1); //RX Mode
+  //writeBit(0, 0, 0); //Tx
   writeBit(0, 1, 1); //Power UP
   writeBit(0, 4, 1); //Disable MAX_RT Interrupt
   writeBit(0, 5, 1); //Disable TX_DS Interrupt
   //writeBit(0, 6, 0); //Enable RX_DR Interrupt
-<<<<<<< HEAD
-  //Set Constant Payload Length
-  writeByte(firstPipeAddress, constPayloadLength);
-=======
-  writeByte(0x12, constPacketLength);
->>>>>>> origin/master
 
+  //Set Constant Payload Length
+  writeByte(firstPipeAddress, constPacketLength);
   
   //writeBit(0x1D, 2, 1); //Enable DPL
   
@@ -100,12 +96,17 @@ void NRF::writeBit(byte address, byte bitToWrite, byte value) {
   //Get Previous Value
   byte prevRegValue = readAddress(address);
   value = value & 0x01;
-  value <<= bitToWrite;
 
   if(value == 1)
+  {
+    value <<= bitToWrite;
     value = value | prevRegValue;
+  }
   else
+  {
+    value = 0x01 << bitToWrite;
     value = prevRegValue & ~value;
+  }
   
   //Write new Value
   writeByte(address, value);
@@ -197,16 +198,11 @@ void NRF::sendMessage(char * message, unsigned short destination) {
     for(unsigned short j = 0; j < maxPayloadLength; j++)
     {
 
-      std::cout << maxPayloadLength << std::endl;
-
       //message Left >= 0
       if((messageLength - i - j) > 0)
         payload[4+j] = message[j+i];
       else
-      {
         payload[4+j] = '\0';
-        debugMessage("NULL");
-      }
     }
 
     //Make Sure it's null Terminated
@@ -214,11 +210,13 @@ void NRF::sendMessage(char * message, unsigned short destination) {
     payload[constPacketLength] = '\0';
 
 
+#ifdef __linux__
     debugMessage("Payload...");
     for(unsigned short i = 0; i < constPacketLength; i++)
       std::cout << payload[i];
 
     std::cout << std::endl;
+#endif
 
     sendPacket(payload);
   }
@@ -298,6 +296,7 @@ void NRF::debugMessage(String message){
 }
 
 void NRF::test(){
+  #ifdef __linux__
   debugMessage("----------Test Begin----------");
   String sReadData;
   byte readData;
@@ -315,4 +314,5 @@ void NRF::test(){
   debugMessage(sReadData);
 
   debugMessage("----------Test End------------");
+  #endif
 }

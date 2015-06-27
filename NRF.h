@@ -8,6 +8,8 @@
 #include <cstring>
 #include <wiringPiSPI.h>
 #include <wiringPi.h>
+#include <bitset>
+
 
 //Type conversions
 #define byte unsigned char
@@ -51,14 +53,10 @@
 #define sendPayloadCMD  0b10100000
 #define readPayloadCMD  0b01100001
 
-<<<<<<< HEAD
-#define firstPipeAddress 0b00010001
-#define constPayloadLength 32
-=======
-#define firstPipeAddress B00110001
 
+#define firstPipeAddress 0b00010001
 #define constPacketLength 32
->>>>>>> origin/master
+
 
 
 class NRF
