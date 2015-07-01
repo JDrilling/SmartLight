@@ -10,20 +10,35 @@ void digitalWrite(int pin, int val){
 }
 #endif
 
+void NRF::stop(){
+#ifdef __linux__
+  bcm2835_spi_end();
+  bcm2835_close();
+#endif
+  return;
+}
+
+
 void NRF::init() {
 
 #ifdef __linux__
-  bcm2835_init();
+  //Uncomment to Debug
+  //bcm2835_set_debug(1);
+
+
+  if(!bcm2835_init())
+    std::cout << "Fail!!!!!!" << std::endl;
 #endif
 
   //Initialize Pins
   pinMode(CE, OUTPUT);
   pinMode(CSN, OUTPUT);
+
+#ifdef __arduino__
   pinMode(MOSI, OUTPUT);
   pinMode(MISO, INPUT);
   pinMode(SCK, OUTPUT);
 
-#ifdef __arduino__
   //Set up SPI
   SPI.setBitOrder(MSBFIRST);
   //Keeps clock low until data is available
@@ -46,24 +61,31 @@ void NRF::init() {
   bcm2835_spi_begin();
   bcm2835_spi_setBitOrder(BCM2835_SPI_BIT_ORDER_MSBFIRST);
   bcm2835_spi_setDataMode(BCM2835_SPI_MODE0);
-  bcm2835_spi_setClockDivider(BCM2835_SPI_CLOCK_DIVIDER_32);
-  bcm2835_spi_chipSelect(BCM2835_SPI_CS0);
+  bcm2835_spi_setClockDivider(BCM2835_SPI_CLOCK_DIVIDER_64);
 
-  usleep(10000);
+  usleep(1000);
 #endif
 
   
   debugMessage("SPI Set up");
   
-  //writeBit(0, 0, 1); //RX Mode
-  writeBit(0, 0, 0); //Tx
+  writeBit(0, 0, 1); //RX Mode
+  std::cout << "RX" << std::endl;
+  test();
+  //writeBit(0, 0, 0); //Tx
   writeBit(0, 1, 1); //Power UP
+  test();
   writeBit(0, 4, 1); //Disable MAX_RT Interrupt
+  test();
   writeBit(0, 5, 1); //Disable TX_DS Interrupt
-  writeBit(0, 6, 0); //Enable RX_DR Interrupt
+  test();
+  //writeBit(0, 6, 0); //Enable RX_DR Interrupt
+  //test();
 
   //Set Constant Payload Length
   writeByte(firstPipeAddress, constPacketLength);
+  std::cout << "Payload Length" << std::endl;
+  test();
   
   //writeBit(0x1D, 2, 1); //Enable DPL
   
@@ -81,14 +103,25 @@ void NRF::init() {
 void NRF::writeByte(byte address, byte byteToWrite) {
 
   digitalWrite(CSN, LOW);
-  
+
+#ifdef __linux__
+  usleep(100);
+  char temp[2];
+  temp[0] = address | 0x20;
+  temp[1] = byteToWrite;
+  bcm2835_spi_transfern(temp, 2);
+
+  usleep(100);
+#endif
+#ifdef __arduino__
   transferByte(address | 0x20);
   transferByte(byteToWrite);
+#endif
   
   digitalWrite(CSN, HIGH);
 
-#ifndef __linux__
-  usleep(10000);
+#ifdef __linux__
+  usleep(100);
 #endif
   
   return;
@@ -99,16 +132,28 @@ byte NRF::readAddress(byte address) {
   
   digitalWrite(CSN, LOW);
   
+#ifdef __arduino__  
   transferByte(address);
-  
-#ifdef __arduino__
   readData = SPI.transfer(0x00);
 #endif
+
 #ifdef __linux__
-  readData = bcm2835_spi_transfer(0x00);
+  usleep(100);
+
+  char temp[2];
+  temp[0] = (char)address;
+  temp[1] = 0x00;
+  bcm2835_spi_transfern(temp,2);
+  readData = temp[1];
+
+  usleep(100);
 #endif
   
   digitalWrite(CSN, HIGH);
+
+#ifdef __linux__
+  usleep(100);
+#endif
   
   return readData;
   }
@@ -116,11 +161,10 @@ byte NRF::readAddress(byte address) {
 void NRF::writeBit(byte address, byte bitToWrite, byte value) {
   //Get Previous Value
   byte prevRegValue = readAddress(address);
-  value = value & 0x01;
 
-  if(value == 1)
+  if(value >= 1)
   {
-    value <<= bitToWrite;
+    value = 0x01 << bitToWrite;
     value = value | prevRegValue;
   }
   else
@@ -284,14 +328,19 @@ void NRF::sendPacket(char * packet) {
 
   digitalWrite(CSN, HIGH);
 
-  /*
   digitalWrite(CE, LOW);
+#ifdef __linux__
+  usleep(1000);
+#endif
   writeBit(0,0,0);
+#ifdef __linux__
+  usleep(1000);
+#endif
   digitalWrite(CE, HIGH);
-  digitalWrite(CE, LOW);
+#ifdef __linux__
+  usleep(1000);
+#endif
   writeBit(0,0,1);
-  digitalWrite(CE, HIGH);
-  */
 
   if (sequence == USHRT_MAX)
     sequence = 0;

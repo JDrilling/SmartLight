@@ -71,6 +71,7 @@ class NRF
   public:    
     static unsigned short sequence;
     void init();
+    void stop();
               
     void writeByte(byte address, byte byteToWrite);
     void writeBit(byte address, byte bitToWrite, byte value);
