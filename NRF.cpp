@@ -49,7 +49,7 @@ void NRF::init() {
   digitalWrite(CE, HIGH);
   digitalWrite(CSN, HIGH);
 
-  dealay (10);
+  delay(100);
 
   //Start the SPI
   SPI.begin();
@@ -57,8 +57,11 @@ void NRF::init() {
 #ifdef __linux__
   digitalWrite(CE, HIGH);
   digitalWrite(CSN, HIGH);
+  usleep(10000);
 
   bcm2835_spi_begin();
+  usleep(100);
+  
   bcm2835_spi_setBitOrder(BCM2835_SPI_BIT_ORDER_MSBFIRST);
   bcm2835_spi_setDataMode(BCM2835_SPI_MODE0);
   bcm2835_spi_setClockDivider(BCM2835_SPI_CLOCK_DIVIDER_64);
@@ -70,17 +73,13 @@ void NRF::init() {
   debugMessage("SPI Set up");
   
   writeBit(0, 0, 1); //RX Mode
-  std::cout << "RX" << std::endl;
-  test();
   //writeBit(0, 0, 0); //Tx
   writeBit(0, 1, 1); //Power UP
   test();
   writeBit(0, 4, 1); //Disable MAX_RT Interrupt
   test();
   writeBit(0, 5, 1); //Disable TX_DS Interrupt
-  test();
   //writeBit(0, 6, 0); //Enable RX_DR Interrupt
-  //test();
 
   //Set Constant Payload Length
   writeByte(firstPipeAddress, constPacketLength);
@@ -196,35 +195,32 @@ void NRF::clearInterrupts() {
     return;
 }
 
-String NRF::getPacket() {
+int NRF::getPacket(char * buff) {
   //debugMessage("Getting Packet...");
+
+  if(buff != NULL)
+    delete buff;
   
   //Get Packet Length
   byte packetLength = constPacketLength;//readAddress(0b1100000);
-  String packet = "";
+  buff = new char [packetLength + 1];
 
+  for (byte i = 0; i < packetLength+1; i++) buff[i] = 0x00;
 
   //Initial Read CMD
   digitalWrite(CSN, LOW);
-
-#ifdef __arduino__
-  SPI.transfer(readPayloadCMD);
-
-  //Read the payload
-  for (byte i = 0; i < packetLength; i++)
-    packet += SPI.transfer(0x00);
-#endif
-#ifdef __linux__
+  
   transferByte(readPayloadCMD);
 
-  char* cPacket = new char[packetLength];
+#ifdef __arduino__
+  //Read the payload
+  for (byte i = 0; i < packetLength; i++)
+    buff[i] = SPI.transfer(0x00);
+#endif
+#ifdef __linux__
 
-  for (byte i = 0; i < packetLength; i++) cPacket[i] = 0x00;
-
-  bcm2835_spi_transfern(cPacket, packetLength);
-
-  packet = std::string(cPacket, cPacket + packetLength);
-  delete cPacket;
+  bcm2835_spi_transfern(buff, packetLength);
+  
 #endif
 
   digitalWrite(CSN, HIGH);
@@ -236,7 +232,7 @@ String NRF::getPacket() {
 
   //debugMessage("Got Packet! ... ");
   //debugMessage(packet);
-  return packet;
+  return packetLength;
 }
 
 void NRF::sendMessage(char * message, unsigned short destination) {
@@ -303,7 +299,6 @@ void NRF::sendPacket(char * packet) {
   digitalWrite(CSN, LOW);
 
   transferByte(sendPayloadCMD);
-
 
 #ifdef __arduino__
   for (unsigned int i = 0; i < packetLength; i++)
