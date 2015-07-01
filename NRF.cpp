@@ -73,18 +73,13 @@ void NRF::init() {
   debugMessage("SPI Set up");
   
   writeBit(0, 0, 1); //RX Mode
-  //writeBit(0, 0, 0); //Tx
   writeBit(0, 1, 1); //Power UP
-  test();
   writeBit(0, 4, 1); //Disable MAX_RT Interrupt
-  test();
   writeBit(0, 5, 1); //Disable TX_DS Interrupt
   //writeBit(0, 6, 0); //Enable RX_DR Interrupt
 
   //Set Constant Payload Length
   writeByte(firstPipeAddress, constPacketLength);
-  std::cout << "Payload Length" << std::endl;
-  test();
   
   //writeBit(0x1D, 2, 1); //Enable DPL
   
@@ -195,17 +190,15 @@ void NRF::clearInterrupts() {
     return;
 }
 
-int NRF::getPacket(char * buff) {
+void NRF::getPacket(char * buff, int size = constPacketLength) {
   //debugMessage("Getting Packet...");
-
-  if(buff != NULL)
-    delete buff;
   
   //Get Packet Length
   byte packetLength = constPacketLength;//readAddress(0b1100000);
-  buff = new char [packetLength + 1];
+  if(size < packetLength)
+    return;
 
-  for (byte i = 0; i < packetLength+1; i++) buff[i] = 0x00;
+  for (byte i = 0; i < packetLength; i++) buff[i] = 0x00;
 
   //Initial Read CMD
   digitalWrite(CSN, LOW);
@@ -229,10 +222,8 @@ int NRF::getPacket(char * buff) {
   writeCMD(flushRXCMD);
 
   writeBit(0x07, 6, 1);
-
-  //debugMessage("Got Packet! ... ");
-  //debugMessage(packet);
-  return packetLength;
+  
+  return;
 }
 
 void NRF::sendMessage(char * message, unsigned short destination) {
@@ -250,10 +241,10 @@ void NRF::sendMessage(char * message, unsigned short destination) {
   for (int i = 0; i < messageLength; i += maxPayloadLength) {
 
     //Add the Header first
-    payload[0] = (destination & 0xF0 >> 4);
-    payload[1] = (destination & 0x0F); 
-    payload[2] = (sequence & 0xF0 >> 4);
-    payload[3] = (sequence & 0x0F);
+    payload[0] = (destination & 0xFF00 >> 4);
+    payload[1] = (destination & 0x00FF); 
+    payload[2] = (sequence & 0xFF00 >> 4);
+    payload[3] = (sequence & 0x00FF);
 
 
     for(unsigned short j = 0; j < maxPayloadLength; j++)
