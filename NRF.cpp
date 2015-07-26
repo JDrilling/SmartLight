@@ -25,7 +25,6 @@ void NRF::init() {
   //Uncomment to Debug
   //bcm2835_set_debug(1);
 
-
   if(!bcm2835_init())
     std::cout << "Fail!!!!!!" << std::endl;
 #endif
@@ -57,7 +56,6 @@ void NRF::init() {
 #ifdef __linux__
   digitalWrite(CE, HIGH);
   digitalWrite(CSN, HIGH);
-  usleep(10000);
 
   bcm2835_spi_begin();
   usleep(100);
@@ -66,27 +64,20 @@ void NRF::init() {
   bcm2835_spi_setDataMode(BCM2835_SPI_MODE0);
   bcm2835_spi_setClockDivider(BCM2835_SPI_CLOCK_DIVIDER_64);
 
-  usleep(1000);
+  usleep(100);
 #endif
 
   
   debugMessage("SPI Set up");
   
   writeBit(0, 0, 1); //RX Mode
-  //writeBit(0, 0, 0); //Tx
   writeBit(0, 1, 1); //Power UP
-  test();
   writeBit(0, 4, 1); //Disable MAX_RT Interrupt
-  test();
   writeBit(0, 5, 1); //Disable TX_DS Interrupt
   //writeBit(0, 6, 0); //Enable RX_DR Interrupt
 
   //Set Constant Payload Length
   writeByte(firstPipeAddress, constPacketLength);
-  std::cout << "Payload Length" << std::endl;
-  test();
-  
-  //writeBit(0x1D, 2, 1); //Enable DPL
   
   //Flush RX
   writeCMD(flushRXCMD);
@@ -104,13 +95,10 @@ void NRF::writeByte(byte address, byte byteToWrite) {
   digitalWrite(CSN, LOW);
 
 #ifdef __linux__
-  usleep(100);
   char temp[2];
   temp[0] = address | 0x20;
   temp[1] = byteToWrite;
   bcm2835_spi_transfern(temp, 2);
-
-  usleep(100);
 #endif
 #ifdef __arduino__
   transferByte(address | 0x20);
@@ -119,10 +107,6 @@ void NRF::writeByte(byte address, byte byteToWrite) {
   
   digitalWrite(CSN, HIGH);
 
-#ifdef __linux__
-  usleep(100);
-#endif
-  
   return;
 }
 
@@ -137,25 +121,17 @@ byte NRF::readAddress(byte address) {
 #endif
 
 #ifdef __linux__
-  usleep(100);
-
   char temp[2];
   temp[0] = (char)address;
   temp[1] = 0x00;
   bcm2835_spi_transfern(temp,2);
   readData = temp[1];
-
-  usleep(100);
 #endif
   
   digitalWrite(CSN, HIGH);
 
-#ifdef __linux__
-  usleep(100);
-#endif
-  
   return readData;
-  }
+}
 
 void NRF::writeBit(byte address, byte bitToWrite, byte value) {
   //Get Previous Value
@@ -217,10 +193,9 @@ int NRF::getPacket(char * buff) {
   for (byte i = 0; i < packetLength; i++)
     buff[i] = SPI.transfer(0x00);
 #endif
-#ifdef __linux__
 
+#ifdef __linux__
   bcm2835_spi_transfern(buff, packetLength);
-  
 #endif
 
   digitalWrite(CSN, HIGH);
@@ -272,11 +247,13 @@ void NRF::sendMessage(char * message, unsigned short destination) {
 
 
 #ifdef __linux__
+    /* Used to Debug Pyaloads
     debugMessage("Payload...");
     for(unsigned short i = 0; i < constPacketLength; i++)
       std::cout << payload[i];
 
     std::cout << std::endl;
+    */
 #endif
 
     sendPacket(payload);
@@ -306,19 +283,22 @@ void NRF::sendPacket(char * packet) {
 
 #endif
 #ifdef __linux__
+  /*
   std::cout << "Packet:  ";
   for(unsigned short i = 0; i < constPacketLength; i++)
     std::cout << packet[i];
 
-  std::cout << std::endl;
+  std::cout << std::endl;*/
 
   bcm2835_spi_transfern(packet, packetLength);
 
+  /*
   std::cout << "Packet:   ";
   for(unsigned short i = 0; i < constPacketLength; i++)
     std::cout << packet[i];
 
   std::cout << std::endl;
+  */
 #endif
 
   digitalWrite(CSN, HIGH);
@@ -326,14 +306,17 @@ void NRF::sendPacket(char * packet) {
   digitalWrite(CE, LOW);
 #ifdef __linux__
   usleep(1000);
-#endif
   writeBit(0,0,0);
-#ifdef __linux__
+  usleep(1000);
+  digitalWrite(CE, HIGH);
   usleep(1000);
 #endif
+#ifdef __arduino__
+  delay(1);
+  writeBit(0,0,0);
+  delay(1);
   digitalWrite(CE, HIGH);
-#ifdef __linux__
-  usleep(1000);
+  delay(1);
 #endif
   writeBit(0,0,1);
 
