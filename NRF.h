@@ -81,7 +81,7 @@ class NRF
     byte readAddress(byte address);
     void clearInterrupts();
 
-    int getPacket(char * buff);
+    void getPacket(char * buff, int size);
                                       
     void sendPacket(char * payload);
     void sendMessage(char * message, unsigned short destination);
