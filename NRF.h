@@ -11,6 +11,7 @@
 #include <unistd.h>
 
 
+
 //Type conversions
 #define byte unsigned char
 #define String std::string
@@ -48,21 +49,14 @@ void pinMode(int pin, int mode);
 
 //*----------------------Common-----------------------*//
 #include <limits.h>
-
-#define destinationLength   2
-#define sequenceLength      2
-#define headerLength        (destinationLength + sequenceLength)
-#define maxPacketLength     32
-#define maxPayloadLength    (maxPacketLength - headerLength)
+#include "SmartLightPacket.h"
 
 #define flushTXCMD      0b11100001
 #define flushRXCMD      0b11100010
 #define sendPayloadCMD  0b10100000
 #define readPayloadCMD  0b01100001
-
-
 #define firstPipeAddress 0b00010001
-#define constPacketLength 32
+
 
 
 
@@ -70,25 +64,47 @@ class NRF
 {       
   public:    
     static unsigned short sequence;
+
+    //Initiates the NRF in RX Mode
     void init();
+
+    //Stops SPI (Currently only for the pi SPI)
     void stop();
-              
+
+    //Writes A single Byte to the NRF
+    //Changes CSN and writes to specific address
     void writeByte(byte address, byte byteToWrite);
-    void writeBit(byte address, byte bitToWrite, byte value);
 
-    void writeCMD(byte command);
-                          
-    byte readAddress(byte address);
-    void clearInterrupts();
-
-    void getPacket(char * buff, int size);
-                                      
-    void sendPacket(char * payload);
-    void sendMessage(char * message, unsigned short destination);
-
+    //Transfers a single byte over the SPI port.
+    //Doesn't change CSN
     void transferByte(byte byteToWrite);
 
+    //Overwrites a single bit on the NRF
+    void writeBit(byte address, byte bitToWrite, byte value);
+
+    //Writes one byte, but in the Command Format
+    void writeCMD(byte command);
+
+    //Reads a the given address from the NRF, returns the data in the address
+    byte readAddress(byte address);
+
+    //Clears the Interrupt outputs of the NRF
+    void clearInterrupts();
+
+    //Gets a packet of data. Currently 32 bytes long <destination 2B><sequence 2B><payload 28B>
+    void getPacket(char * buff, int size);
+
+    //Sends a 32 Byte Packet
+    void sendPacket(char * packet);
+
+    //Sends a message of any length. 
+    //Message must by an NTCA
+    void sendMessage(char * message, unsigned short destination);
+
+    //Generic console output message
     void debugMessage(String messge);
+
+    //Outputs several console messages to debug the status of the NRF
     void test();
 
 };

@@ -1,4 +1,5 @@
 #include "NRF.h"
+#include "SmartLightPacket.h"
 
 
 unsigned short NRF::sequence = 0;
@@ -171,7 +172,7 @@ void NRF::clearInterrupts() {
     return;
 }
 
-void NRF::getPacket(char * buff, int size = constPacketLength) {
+void NRF::getPacket(char * buff, int size = maxPacketLength) {
   //debugMessage("Getting Packet...");
   
   //Get Packet Length
@@ -221,11 +222,10 @@ void NRF::sendMessage(char * message, unsigned short destination) {
   for (int i = 0; i < messageLength; i += maxPayloadLength) {
 
     //Add the Header first
-    payload[0] = (destination & 0xFF00 >> 4);
+    payload[0] = ((destination & 0xFF00) >> 8);
     payload[1] = (destination & 0x00FF); 
-    payload[2] = (sequence & 0xFF00 >> 4);
+    payload[2] = ((sequence & 0xFF00) >> 8);
     payload[3] = (sequence & 0x00FF);
-
 
     for(unsigned short j = 0; j < maxPayloadLength; j++)
     {
@@ -238,7 +238,6 @@ void NRF::sendMessage(char * message, unsigned short destination) {
     }
 
     //Make Sure it's null Terminated
-    //Even Though there is probably a null in there anyway
     payload[constPacketLength] = '\0';
 
 
@@ -259,11 +258,13 @@ void NRF::sendMessage(char * message, unsigned short destination) {
   return;
 }
 
+
+
+
+
 void NRF::sendPacket(char * packet) {
 
-  unsigned int packetLength;
-
-  packetLength = constPacketLength;//packet.length();
+  unsigned int packetLength = constPacketLength;
 
   //Get rid of any leftover data
   writeCMD(flushTXCMD);
@@ -276,30 +277,14 @@ void NRF::sendPacket(char * packet) {
 #ifdef __arduino__
   for (unsigned int i = 0; i < packetLength; i++)
     transferByte(packet[i]);
-
 #endif
 #ifdef __linux__
-  /*
-  std::cout << "Packet:  ";
-  for(unsigned short i = 0; i < constPacketLength; i++)
-    std::cout << packet[i];
-
-  std::cout << std::endl;*/
-
   bcm2835_spi_transfern(packet, packetLength);
-
-  /*
-  std::cout << "Packet:   ";
-  for(unsigned short i = 0; i < constPacketLength; i++)
-    std::cout << packet[i];
-
-  std::cout << std::endl;
-  */
 #endif
 
   digitalWrite(CSN, HIGH);
-
   digitalWrite(CE, LOW);
+  
 #ifdef __linux__
   usleep(1000);
   writeBit(0,0,0);
@@ -314,6 +299,8 @@ void NRF::sendPacket(char * packet) {
   digitalWrite(CE, HIGH);
   delay(1);
 #endif
+
+
   writeBit(0,0,1);
 
   if (sequence == USHRT_MAX)
